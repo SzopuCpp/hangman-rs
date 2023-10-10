@@ -19,7 +19,10 @@ impl Game {
         Self {
             word: word.clone(),
             category,
-            word_encrypted: word.chars().into_iter().map(|_| '*').collect::<String>(),
+            word_encrypted: word.chars().into_iter().map(|c| match c {
+                '.' | ',' | ' ' | '-' | '!' | '?' => c,
+                _ => '*'
+            }).collect::<String>(),
             state: State::InGame { hp: 5, last_guess: None },
         }
     }
@@ -31,19 +34,26 @@ impl Game {
             print!("Guess character: ");
             stdout().flush().unwrap();
             stdin().read_line(&mut guess).expect("stdin error");
-            self.guess_character(guess.trim().chars().collect::<Vec<char>>()[0]);
+            self.guess_character(match guess.trim().to_lowercase().chars().collect::<Vec<char>>().get(0) {
+                Some(c) => *c,
+                None => '\0'
+            });
         }
         self.print_info();
     }
 
     fn guess_character(&mut self, guess: char) {
+        if guess == '\0' {
+            return;
+        }
+
         let mut result: bool = false;
-        let chars: Vec<char> = self.word.chars().collect();
+        let chars: Vec<char> = self.word.clone().chars().collect();
         self.word_encrypted = self.word_encrypted.chars().enumerate().map(
             |(i, c)| {
-                if c == '*' && guess == chars[i] {
+                if c == '*' && guess == chars[i].to_lowercase().next().unwrap() {
                     result = true;
-                    guess
+                    chars[i]
                 } else { c }
             }
         ).collect();
@@ -71,10 +81,10 @@ impl Game {
 
         match self.state {
             State::Win => {
-                println!("Congratulations, you won! Word: {}", self.word);
+                println!("Congratulations, you won!\nWord: {}", self.word);
             }
             State::Lose => {
-                println!("You lost! Word: {}", self.word);
+                println!("You lost!\nWord: {}", self.word);
             }
             State::InGame { hp, last_guess } => {
                 println!("Word: {} - Category: {} - HP: {}", self.word_encrypted, self.category, hp);
